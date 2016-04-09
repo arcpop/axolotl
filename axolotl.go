@@ -44,7 +44,9 @@ const (
 )
 
 //ErrInvalidKeyLength gets returned if a function expecting a key gets a key which is too short
-var ErrInvalidKeyLength = errors.New("The specified key has not sufficient length!")
+var ErrInvalidKeyLength = errors.New("The specified key has not sufficient length.")
+
+var ErrMalformedMessage = errors.New("The passed message seem to be malformed.")
 
 //State describes an axolotl protocol state
 type State struct {
@@ -97,8 +99,8 @@ func (s *State) SaveTo(fileName string) (error) {
 }
 
 //DecryptMessage decrypts the message
-func (s *State) DecryptMessage(message []byte) ([]byte, error) {
-    return axolotlDecryptMessage(s, message)
+func (s *State) DecryptMessage(rd io.Reader) ([]byte, error) {
+    return axolotlDecryptMessage(rd, message)
 }
 
 //EncryptMessage encrypts the message
