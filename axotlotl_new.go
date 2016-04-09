@@ -2,6 +2,7 @@ package axolotl
 
 import (
 	"io"
+    "container/list"
 )
 
 func axolotlNew(curveParam, streamCipher, HKDF, HMAC uint8, senderSide bool, masterKey[]byte, initialDHRatchetKey []byte) (*State, error)  {
@@ -15,6 +16,7 @@ func axolotlNew(curveParam, streamCipher, HKDF, HMAC uint8, senderSide bool, mas
         hkdf: hkdfs[HKDF],
         hmac: hmacs[HMAC],
         ratchetFlag: senderSide,
+        skippedKeys: list.New(),
     }
     kdf := state.hkdf(masterKey, []byte{}, []byte{})
     

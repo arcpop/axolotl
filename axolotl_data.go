@@ -16,7 +16,7 @@ import (
 
 type key []byte
 type dhkey []byte
-type storedkey [2][]byte
+type storedkey [2]key
 
 
 var streamCiphers = map[uint8]func([]byte) (cipher.AEAD, error) {

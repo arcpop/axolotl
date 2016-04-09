@@ -7,6 +7,7 @@ import (
 	"io"
 	"crypto/cipher"
 	"crypto/rand"
+	"container/list"
 )
 
 //Specifies which elliptic curve is used for ECDH
@@ -49,6 +50,8 @@ var ErrInvalidKeyLength = errors.New("The specified key has not sufficient lengt
 
 var ErrMalformedMessage = errors.New("The passed message seem to be malformed.")
 
+var ErrUndecryptable = errors.New("The passed message cannot be decrypted.")
+
 //State describes an axolotl protocol state
 type State struct {
     CurveParam uint8
@@ -80,7 +83,9 @@ type State struct {
     
     ratchetFlag bool
     
-    skippedKeys []storedkey
+    skippedKeys *list.List
+    
+    stagedSkippedMKs []storedkey
     
     curve elliptic.Curve
     hmac func(key []byte) hash.Hash

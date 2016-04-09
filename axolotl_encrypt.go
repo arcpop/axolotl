@@ -93,14 +93,14 @@ func axolotlEncryptMessage(s *State, msg []byte, randomData io.Reader) ([]byte, 
     
     m := &message{}
     
-    m.headerNonceSize = headerCipher.NonceSize()
+    m.headerNonceSize = byte(headerCipher.NonceSize())
     m.headerNonce = make([]byte, m.headerNonceSize)
     _, err = io.ReadFull(randomData, m.headerNonce)
     if err != nil {
         return nil, err
     }
     
-    m.messageNonceSize = messageCipher.NonceSize()
+    m.messageNonceSize = byte(messageCipher.NonceSize())
     m.messageNonce = make([]byte, m.messageNonceSize)
     _, err = io.ReadFull(randomData, m.messageNonce)
     if err != nil {
@@ -119,8 +119,8 @@ func axolotlEncryptMessage(s *State, msg []byte, randomData io.Reader) ([]byte, 
     //Encrypt the message
     m.messageData = messageCipher.Seal(nil, m.messageNonce, msg, []byte{})
     
-    m.headerLength = len(m.headerData)
-    m.messageLength = len(m.messageData)
+    m.headerLength = uint32(len(m.headerData))
+    m.messageLength = uint32(len(m.messageData))
     
     s.msgNumS++
     s.chainKeyS = s.hmac(s.chainKeyS).Sum([]byte("1"))
