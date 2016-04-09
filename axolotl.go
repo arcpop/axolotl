@@ -20,9 +20,9 @@ const (
 
 //Specifies which stream cipher is used for symmetric en-/decryption
 const (
-    GCM_AES_128 = iota
-    GCM_AES_192 = iota
-    GCM_AES_256 = iota
+    AES_GCM_128 = iota
+    AES_GCM_192 = iota
+    AES_GCM_256 = iota
 )
 
 //Specifies which hashed key derivation function is used to generate the keystream
@@ -94,7 +94,7 @@ type State struct {
 }
 
 //New returns a new state to work with the axolotl protocol
-func New(curveParam, streamCipher, HKDF, HMAC uint8, senderSide bool, masterKey[]byte, initialDHRatchetKey []byte, privateDHRatchetKey []byte) (*State, error)  {
+func New(curveParam, streamCipher, HKDF, HMAC uint8, senderSide bool, masterKey, initialDHRatchetKey, privateDHRatchetKey []byte) (*State, error)  {
     return axolotlNew(curveParam, streamCipher, HKDF, HMAC, senderSide, masterKey, initialDHRatchetKey, privateDHRatchetKey)
 }
 /*
@@ -121,4 +121,9 @@ func (s *State) DecryptMessageBuffer(b []byte) ([]byte, error) {
 //EncryptMessage encrypts the message
 func (s *State) EncryptMessage(message []byte) ([]byte, error) {
     return axolotlEncryptMessage(s, message, rand.Reader)
+}
+
+//NewP521_SHA512_AESGCM256 returns axolotl with max security
+func NewP521_SHA512_AESGCM256(senderSide bool, masterKey, initialDHRatchetKey, privateDHRatchetKey []byte) (*State, error){
+    return New(CurveP521, AES_GCM_256, HKDF_SHA_512, HMAC_SHA_512, senderSide, masterKey, initialDHRatchetKey, privateDHRatchetKey)
 }

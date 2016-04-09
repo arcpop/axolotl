@@ -20,7 +20,7 @@ type storedkey [2]key
 
 
 var streamCiphers = map[uint8]func([]byte) (cipher.AEAD, error) {
-    GCM_AES_128: func (key []byte) (cipher.AEAD, error) {
+    AES_GCM_128: func (key []byte) (cipher.AEAD, error) {
         if len(key) < 16 {
             return nil, ErrInvalidKeyLength
         }
@@ -30,7 +30,7 @@ var streamCiphers = map[uint8]func([]byte) (cipher.AEAD, error) {
         }
         return cipher.NewGCM(c)
     },
-    GCM_AES_192: func (key []byte) (cipher.AEAD, error) {
+    AES_GCM_192: func (key []byte) (cipher.AEAD, error) {
         if len(key) < 24 {
             return nil, ErrInvalidKeyLength
         }
@@ -40,7 +40,7 @@ var streamCiphers = map[uint8]func([]byte) (cipher.AEAD, error) {
         }
         return cipher.NewGCM(c)
     },
-    GCM_AES_256: func (key []byte) (cipher.AEAD, error) {
+    AES_GCM_256: func (key []byte) (cipher.AEAD, error) {
         if len(key) < 32 {
             return nil, ErrInvalidKeyLength
         }
