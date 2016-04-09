@@ -47,9 +47,10 @@ func dhRatchetGenerateKeys(s * State, randomData io.Reader) (error) {
         return err
     }
     
-    copy(s.rootKey, rk)
-    copy(s.nextHdrKeyS, nhk)
-    copy(s.chainKeyS, ck)
+    s.rootKey = rk
+    s.hdrKeyS = s.nextHdrKeyS
+    s.nextHdrKeyS = nhk
+    s.chainKeyS = ck
     
     zeroKey(s.dhRatchetPrivKey)
     s.dhRatchetPrivKey = make([]byte, len(priv))
@@ -83,10 +84,9 @@ func axolotlEncryptMessage(s *State, msg []byte, randomData io.Reader) ([]byte, 
     if err != nil {
         return nil, err
     }
+    messageKey := s.hmac(s.chainKeyS).Sum([]byte{ 0, })
     
-    messageKey := s.hmac(s.chainKeyS).Sum([]byte("0"))
-    
-    headerCipher, err = s.streamCipher(messageKey)
+    messageCipher, err = s.streamCipher(messageKey)
     if err != nil {
         return nil, err
     }
@@ -108,7 +108,7 @@ func axolotlEncryptMessage(s *State, msg []byte, randomData io.Reader) ([]byte, 
     }
     
     //Set the header plaintext
-    m.headerData = make([]byte, 0, 8 + len(s.dhRatchetS))
+    m.headerData = make([]byte, 8 + len(s.dhRatchetS))
     binary.BigEndian.PutUint32(m.headerData[0:4], s.msgNumS)
     binary.BigEndian.PutUint32(m.headerData[4:8], s.prevMsgNumS)
     copy(m.headerData[8:], s.dhRatchetS)
@@ -123,6 +123,6 @@ func axolotlEncryptMessage(s *State, msg []byte, randomData io.Reader) ([]byte, 
     m.messageLength = uint32(len(m.messageData))
     
     s.msgNumS++
-    s.chainKeyS = s.hmac(s.chainKeyS).Sum([]byte("1"))
+    s.chainKeyS = s.hmac(s.chainKeyS).Sum([]byte{ 1, })
     return serialize(m), nil
 }

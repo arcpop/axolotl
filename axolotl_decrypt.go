@@ -9,7 +9,7 @@ import (
 )
 
 func tryDecrypt(s *State, msg *message, hk, mk key) ([]byte, bool) {
-    m, err := tryDecryptHeader(s, hk, msg)
+    _, err := tryDecryptHeader(s, hk, msg)
     if err != nil {
         return nil, false
     }
@@ -50,8 +50,7 @@ func tryDecryptHeader(s * State, hk key, msg *message) ([]byte, error) {
     if len(hk) == 0 {
         return nil, ErrInvalidKeyLength
     }
-    
-    headerCipher, err := s.streamCipher(s.hdrKeyR)
+    headerCipher, err := s.streamCipher(hk)
     if err != nil {
         return nil, err
     }
@@ -60,11 +59,22 @@ func tryDecryptHeader(s * State, hk key, msg *message) ([]byte, error) {
 }
 
 func tryDecryptMessage(s *State, mk key, msg *message) ([]byte, error) {
+    if len(mk) == 0 {
+        return nil, ErrInvalidKeyLength
+    }
     msgCipher, err := s.streamCipher(mk)
     if err != nil {
         return nil, err
     }
     return msgCipher.Open(nil, msg.messageNonce, msg.messageData, nil)
+}
+func axolotlDecryptMessageBuffer(s *State, b []byte) ([]byte, error) {
+    m, err := deserialize(b)
+    
+    if err != nil {
+        return nil, err
+    }
+    return decryptInner(s, m)
 }
 
 func axolotlDecryptMessage(s *State, rd io.Reader) ([]byte, error) {
@@ -73,7 +83,10 @@ func axolotlDecryptMessage(s *State, rd io.Reader) ([]byte, error) {
     if err != nil {
         return nil, err
     }
-    
+    return decryptInner(s, m)
+}
+func decryptInner(s *State, m *message) ([]byte, error) {
+    var err error
     msg, ok := tryDecryptWithSkippedKeys(s, m)
     if ok {
         return msg, nil
@@ -81,7 +94,7 @@ func axolotlDecryptMessage(s *State, rd io.Reader) ([]byte, error) {
     
     var hdr []byte
     
-    if hdr, err = tryDecryptHeader(s, s.hdrKeyR, m); err != nil {
+    if hdr, err = tryDecryptHeader(s, s.hdrKeyR, m); err == nil {
         np := binary.BigEndian.Uint32(hdr[0:4])
         ckp, mk := stageSkippedHeaderAndMessageKeys(s, s.hdrKeyR, s.msgNumR, np, s.chainKeyR)
         if ckp != nil && mk != nil {
@@ -104,6 +117,8 @@ func axolotlDecryptMessage(s *State, rd io.Reader) ([]byte, error) {
     np := binary.BigEndian.Uint32(hdr[0:4])
     pnp := binary.BigEndian.Uint32(hdr[4:8])
     dhrp := hdr[8:]
+    
+    
     stageSkippedHeaderAndMessageKeys(s, s.hdrKeyR, s.msgNumR, pnp, s.chainKeyR)
     hkp := s.nextHdrKeyR
     
@@ -149,7 +164,7 @@ func axolotlDecryptMessage(s *State, rd io.Reader) ([]byte, error) {
 }
 
 func commitStagedSkippedKeys(s *State) {
-    for i, k := range s.stagedSkippedMKs {
+    for _, k := range s.stagedSkippedMKs {
         s.skippedKeys.PushBack(k)
     }
     s.stagedSkippedMKs = s.stagedSkippedMKs[:0]
@@ -164,9 +179,8 @@ func stageSkippedHeaderAndMessageKeys(s *State, hkr key, nr, np uint32, ckr key)
     }
     var mk key
     for i := nr; i <= np; i++ {
-        hm := s.hmac(ckr)
-        mk = hm.Sum([]byte("0"))
-        ckr = hm.Sum([]byte("1"))
+        mk = s.hmac(ckr).Sum([]byte{ 0, })
+        ckr = s.hmac(ckr).Sum([]byte{ 1, })
         s.stagedSkippedMKs = append(s.stagedSkippedMKs, [2]key{hkr, mk})
     }
     return ckr, mk

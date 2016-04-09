@@ -5,7 +5,7 @@ import (
     "container/list"
 )
 
-func axolotlNew(curveParam, streamCipher, HKDF, HMAC uint8, senderSide bool, masterKey[]byte, initialDHRatchetKey []byte) (*State, error)  {
+func axolotlNew(curveParam, streamCipher, HKDF, HMAC uint8, senderSide bool, masterKey[]byte, initialDHRatchetKey []byte, privateDHRatchetKey []byte) (*State, error)  {
     state := &State{ 
         CurveParam: curveParam, 
         StreamCipher: streamCipher, 
@@ -31,6 +31,7 @@ func axolotlNew(curveParam, streamCipher, HKDF, HMAC uint8, senderSide bool, mas
         err = createSenderKeys(kdf, state)
     } else {
         state.dhRatchetS = initialDHRatchetKey
+        state.dhRatchetPrivKey = privateDHRatchetKey
         err = createReceiverKeys(kdf, state)
     }
     if err != nil {

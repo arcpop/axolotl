@@ -57,7 +57,7 @@ func deserialize(b []byte) (*message, error)  {
     
     totalLength := 10 + uint32(m.headerNonceSize) + uint32(m.messageNonceSize) + m.headerLength + m.messageLength
     
-    if len(b) < totalLength {
+    if uint32(len(b)) < totalLength {
         return nil, ErrMalformedMessage
     }
     
