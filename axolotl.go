@@ -97,7 +97,7 @@ type State struct {
 func New(curveParam, streamCipher, HKDF, HMAC uint8, senderSide bool, masterKey, initialDHRatchetKey, privateDHRatchetKey []byte) (*State, error)  {
     return axolotlNew(curveParam, streamCipher, HKDF, HMAC, senderSide, masterKey, initialDHRatchetKey, privateDHRatchetKey)
 }
-/*
+
 //FromFile returns a previous saved state from file to work with the axolotl protocol
 func FromFile(fileName string) (*State, error)  {
     return axolotlFromFile(fileName)
@@ -107,7 +107,6 @@ func FromFile(fileName string) (*State, error)  {
 func (s *State) SaveTo(fileName string) (error) {
     return axolotlSaveTo(s, fileName)
 }
-*/
 //DecryptMessage decrypts the message
 func (s *State) DecryptMessage(rd io.Reader) ([]byte, error) {
     return axolotlDecryptMessage(s, rd)
