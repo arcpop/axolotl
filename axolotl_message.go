@@ -55,6 +55,8 @@ func deserialize(b []byte) (*message, error)  {
     m.headerLength = binary.BigEndian.Uint32(b[2:6])
     m.messageLength = binary.BigEndian.Uint32(b[6:10])
     
+    totalLength := 10 + uint32(m.headerNonceSize) + uint32(m.messageNonceSize) + m.headerLength + m.messageLength
+    
     if len(b) < totalLength {
         return nil, ErrMalformedMessage
     }

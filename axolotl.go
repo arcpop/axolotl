@@ -6,6 +6,7 @@ import (
 	"hash"
 	"io"
 	"crypto/cipher"
+	"crypto/rand"
 )
 
 //Specifies which elliptic curve is used for ECDH
@@ -73,6 +74,8 @@ type State struct {
     msgNumS uint32
     msgNumR uint32
     
+    prevMsgNumS uint32
+    
     ratchetFlag bool
     
     skippedKeys []storedkey
@@ -100,10 +103,10 @@ func (s *State) SaveTo(fileName string) (error) {
 
 //DecryptMessage decrypts the message
 func (s *State) DecryptMessage(rd io.Reader) ([]byte, error) {
-    return axolotlDecryptMessage(rd, message)
+    return axolotlDecryptMessage(s, rd, message)
 }
 
 //EncryptMessage encrypts the message
-func (s *AxolotlState) EncryptMessage(message []byte) ([]byte, error) {
-    return axolotlEncryptMessage(message)
+func (s *State) EncryptMessage(message []byte) ([]byte, error) {
+    return axolotlEncryptMessage(s, message, rand.Reader)
 }

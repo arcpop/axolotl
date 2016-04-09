@@ -60,22 +60,18 @@ var dhCurves = map[uint8]func() elliptic.Curve {
 }
 
 var hmacs = map[uint8]func([]byte) hash.Hash {
-    HMAC_SHA_224: func(key []byte) hash.Hash { return hmac.New(sha256.New224, key) },
     HMAC_SHA_256: func(key []byte) hash.Hash { return hmac.New(sha256.New, key) },
     HMAC_SHA_384: func(key []byte) hash.Hash { return hmac.New(sha512.New384, key) },
     HMAC_SHA_512: func(key []byte) hash.Hash { return hmac.New(sha256.New, key) },
-    HMAC_SHA3_224: func(key []byte) hash.Hash { return hmac.New(sha3.New224, key) },
     HMAC_SHA3_256: func(key []byte) hash.Hash { return hmac.New(sha3.New256, key) },
     HMAC_SHA3_384: func(key []byte) hash.Hash { return hmac.New(sha3.New384, key) },
     HMAC_SHA3_512: func(key []byte) hash.Hash { return hmac.New(sha3.New512, key) },
 }
 
 var hkdfs = map[uint8]func ([]byte, []byte, []byte) io.Reader {
-    HKDF_SHA_224: func(secret, salt, info []byte) io.Reader { return hkdf.New(sha256.New224, secret, salt, info) },
     HKDF_SHA_256: func(secret, salt, info []byte) io.Reader { return hkdf.New(sha256.New, secret, salt, info) },
     HKDF_SHA_384: func(secret, salt, info []byte) io.Reader { return hkdf.New(sha512.New384, secret, salt, info) },
     HKDF_SHA_512: func(secret, salt, info []byte) io.Reader { return hkdf.New(sha256.New, secret, salt, info) },
-    HKDF_SHA3_224: func(secret, salt, info []byte) io.Reader { return hkdf.New(sha3.New224, secret, salt, info) },
     HKDF_SHA3_256: func(secret, salt, info []byte) io.Reader { return hkdf.New(sha3.New256, secret, salt, info) },
     HKDF_SHA3_384: func(secret, salt, info []byte) io.Reader { return hkdf.New(sha3.New384, secret, salt, info) },
     HKDF_SHA3_512: func(secret, salt, info []byte) io.Reader { return hkdf.New(sha3.New512, secret, salt, info) },
