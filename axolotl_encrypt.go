@@ -4,10 +4,66 @@ import (
 	"crypto/cipher"
 	"io"
 	"encoding/binary"
+	"crypto/elliptic"
 )
 
+func zeroKey(k []byte) {
+    if k == nil {
+        return
+    }
+    for i := range k {
+        k[i] = 0
+    }
+}
 
-func dhRatchetGenerateKeys(s * State) (error) {
+func dhRatchetGenerateKeys(s * State, randomData io.Reader) (error) {
+    priv, x, y, err := elliptic.GenerateKey(s.curve, randomData)
+    if err != nil {
+        return err
+    }
+    pub := elliptic.Marshal(s.curve, x, y)
+    rx, ry := elliptic.Unmarshal(s.curve, s.dhRatchetR)
+    sx, sy := s.curve.ScalarMult(rx, ry, priv)
+    dhSecret := elliptic.Marshal(s.curve, sx, sy)
+    
+    //kdf := KDF( HMAC-HASH(RK, DH(DHRs, DHRr)) )
+    kdf := s.hkdf(s.hmac(s.rootKey).Sum(dhSecret), []byte{}, []byte{})
+    
+    rk := make([]byte, 32)
+    _, err = io.ReadFull(kdf, rk)
+    if err != nil {
+        return err
+    }
+    
+    nhk := make([]byte, 32)
+    _, err = io.ReadFull(kdf, nhk)
+    if err != nil {
+        return err
+    }
+    
+    ck := make([]byte, 32)
+    _, err = io.ReadFull(kdf, ck)
+    if err != nil {
+        return err
+    }
+    
+    copy(s.rootKey, rk)
+    copy(s.nextHdrKeyS, nhk)
+    copy(s.chainKeyS, ck)
+    
+    zeroKey(s.dhRatchetPrivKey)
+    s.dhRatchetPrivKey = make([]byte, len(priv))
+    copy(s.dhRatchetPrivKey, priv)
+    zeroKey(priv)
+    
+    
+    s.dhRatchetS = make([]byte, len(pub))
+    copy(s.dhRatchetS, pub)
+    
+    s.prevMsgNumS = s.msgNumS
+    s.msgNumS = 0
+    s.ratchetFlag = false
+    
     return nil
 }
 
@@ -17,7 +73,7 @@ func axolotlEncryptMessage(s *State, msg []byte, randomData io.Reader) ([]byte, 
     var messageCipher cipher.AEAD
     
     if s.ratchetFlag {
-        err = dhRatchetGenerateKeys(s)
+        err = dhRatchetGenerateKeys(s, randomData)
         if err != nil {
             return nil, err
         }

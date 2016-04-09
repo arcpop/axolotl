@@ -71,6 +71,8 @@ type State struct {
     dhRatchetS dhkey
     dhRatchetR dhkey
     
+    dhRatchetPrivKey dhkey
+    
     msgNumS uint32
     msgNumR uint32
     
@@ -103,7 +105,7 @@ func (s *State) SaveTo(fileName string) (error) {
 
 //DecryptMessage decrypts the message
 func (s *State) DecryptMessage(rd io.Reader) ([]byte, error) {
-    return axolotlDecryptMessage(s, rd, message)
+    return axolotlDecryptMessage(s, rd)
 }
 
 //EncryptMessage encrypts the message
