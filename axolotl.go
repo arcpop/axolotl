@@ -2,12 +2,12 @@ package axolotl
 
 import (
 	"errors"
-	"crypto/elliptic"
 	"hash"
 	"io"
 	"crypto/cipher"
 	"crypto/rand"
 	"container/list"
+    "github.com/arcpop/ecdh"
 )
 
 //Specifies which elliptic curve is used for ECDH
@@ -71,10 +71,8 @@ type State struct {
     chainKeyS key
     chainKeyR key
     
-    dhRatchetS dhkey
-    dhRatchetR dhkey
-    
-    dhRatchetPrivKey dhkey
+    dhParams *ecdh.ECDH
+    dhPublicKey dhkey
     
     msgNumS uint32
     msgNumR uint32
@@ -87,15 +85,18 @@ type State struct {
     
     stagedSkippedMKs []storedkey
     
-    curve elliptic.Curve
     hmac func(key []byte) hash.Hash
     hkdf func (secret, salt, info []byte) io.Reader
     streamCipher func(key []byte) (cipher.AEAD, error)
 }
 
-//New returns a new state to work with the axolotl protocol
-func New(curveParam, streamCipher, HKDF, HMAC uint8, senderSide bool, masterKey, initialDHRatchetKey, privateDHRatchetKey []byte) (*State, error)  {
-    return axolotlNew(curveParam, streamCipher, HKDF, HMAC, senderSide, masterKey, initialDHRatchetKey, privateDHRatchetKey)
+//NewSender returns a new state to work with the axolotl protocol
+func NewSender(curveParam, streamCipher, HKDF, HMAC uint8, masterKey, dhPubKey []byte) (*State, error)  {
+    return axolotlNewS(curveParam, streamCipher, HKDF, HMAC, masterKey, dhPubKey)
+}
+//NewReceiver returns a new state to work with the axolotl protocol
+func NewReceiver(curveParam, streamCipher, HKDF, HMAC uint8, masterKey []byte, ecdhParams *ecdh.ECDH) (*State, error)  {
+    return axolotlNewR(curveParam, streamCipher, HKDF, HMAC, masterKey, ecdhParams)
 }
 
 //FromFile returns a previous saved state from file to work with the axolotl protocol
@@ -107,6 +108,7 @@ func FromFile(fileName string) (*State, error)  {
 func (s *State) SaveTo(fileName string) (error) {
     return axolotlSaveTo(s, fileName)
 }
+
 //DecryptMessage decrypts the message
 func (s *State) DecryptMessage(rd io.Reader) ([]byte, error) {
     return axolotlDecryptMessage(s, rd)
@@ -122,7 +124,11 @@ func (s *State) EncryptMessage(message []byte) ([]byte, error) {
     return axolotlEncryptMessage(s, message, rand.Reader)
 }
 
-//NewP521_SHA512_AESGCM256 returns axolotl with max security
-func NewP521_SHA512_AESGCM256(senderSide bool, masterKey, initialDHRatchetKey, privateDHRatchetKey []byte) (*State, error){
-    return New(CurveP521, AES_GCM_256, HKDF_SHA_512, HMAC_SHA_512, senderSide, masterKey, initialDHRatchetKey, privateDHRatchetKey)
+//NewP521_SHA512_AESGCM256_Sender returns axolotl with max security
+func NewP521_SHA512_AESGCM256_Sender(masterKey, dhPublicKey []byte) (*State, error){
+    return NewSender(CurveP521, AES_GCM_256, HKDF_SHA_512, HMAC_SHA_512, masterKey, dhPublicKey)
+}
+//NewP521_SHA512_AESGCM256_Receiver returns axolotl with max security
+func NewP521_SHA512_AESGCM256_Receiver(masterKey []byte, dhParams *ecdh.ECDH) (*State, error){
+    return NewReceiver(CurveP521, AES_GCM_256, HKDF_SHA_512, HMAC_SHA_512, masterKey, dhParams)
 }

@@ -4,7 +4,7 @@ import (
 	"crypto/cipher"
 	"io"
 	"encoding/binary"
-	"crypto/elliptic"
+	"github.com/arcpop/ecdh"
 )
 
 func zeroKey(k []byte) {
@@ -17,14 +17,15 @@ func zeroKey(k []byte) {
 }
 
 func dhRatchetGenerateKeys(s * State, randomData io.Reader) (error) {
-    priv, x, y, err := elliptic.GenerateKey(s.curve, randomData)
+    ecdhParams, err := ecdh.GenerateNew(s.dhParams.Curve, randomData)
     if err != nil {
         return err
     }
-    pub := elliptic.Marshal(s.curve, x, y)
-    rx, ry := elliptic.Unmarshal(s.curve, s.dhRatchetR)
-    sx, sy := s.curve.ScalarMult(rx, ry, priv)
-    dhSecret := elliptic.Marshal(s.curve, sx, sy)
+    
+    dhSecret, err := ecdhParams.GetSharedSecret(s.dhPublicKey)
+    if err != nil {
+        return err
+    }
     
     //kdf := KDF( HMAC-HASH(RK, DH(DHRs, DHRr)) )
     kdf := s.hkdf(s.hmac(s.rootKey).Sum(dhSecret), []byte{}, []byte{})
@@ -51,16 +52,7 @@ func dhRatchetGenerateKeys(s * State, randomData io.Reader) (error) {
     s.hdrKeyS = s.nextHdrKeyS
     s.nextHdrKeyS = nhk
     s.chainKeyS = ck
-    
-    zeroKey(s.dhRatchetPrivKey)
-    s.dhRatchetPrivKey = make([]byte, len(priv))
-    copy(s.dhRatchetPrivKey, priv)
-    zeroKey(priv)
-    
-    
-    s.dhRatchetS = make([]byte, len(pub))
-    copy(s.dhRatchetS, pub)
-    
+    s.dhParams = ecdhParams
     s.prevMsgNumS = s.msgNumS
     s.msgNumS = 0
     s.ratchetFlag = false
@@ -108,10 +100,10 @@ func axolotlEncryptMessage(s *State, msg []byte, randomData io.Reader) ([]byte, 
     }
     
     //Set the header plaintext
-    m.headerData = make([]byte, 8 + len(s.dhRatchetS))
+    m.headerData = make([]byte, 8 + len(s.dhParams.PublicKey))
     binary.BigEndian.PutUint32(m.headerData[0:4], s.msgNumS)
     binary.BigEndian.PutUint32(m.headerData[4:8], s.prevMsgNumS)
-    copy(m.headerData[8:], s.dhRatchetS)
+    copy(m.headerData[8:], s.dhParams.PublicKey)
     
     //Encrypt the header
     m.headerData = headerCipher.Seal(nil, m.headerNonce, m.headerData, []byte{})

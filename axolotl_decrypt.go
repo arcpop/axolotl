@@ -4,7 +4,6 @@ import (
     "io"
     "container/list"
     "encoding/binary"
-    "crypto/elliptic"
 	"log"
 )
 
@@ -122,9 +121,10 @@ func decryptInner(s *State, m *message) ([]byte, error) {
     stageSkippedHeaderAndMessageKeys(s, s.hdrKeyR, s.msgNumR, pnp, s.chainKeyR)
     hkp := s.nextHdrKeyR
     
-    x, y := elliptic.Unmarshal(s.curve, dhrp)
-    sx, sy := s.curve.ScalarMult(x, y, s.dhRatchetPrivKey)
-    dhSecret := elliptic.Marshal(s.curve, sx, sy)
+    dhSecret, err := s.dhParams.GetSharedSecret(dhrp)
+    if err != nil {
+        return nil, ErrMalformedMessage
+    }
     
     hm := s.hmac(s.rootKey).Sum(dhSecret)
     kdf := s.hkdf(hm, nil, nil)
@@ -154,8 +154,8 @@ func decryptInner(s *State, m *message) ([]byte, error) {
     s.rootKey = rkp
     s.hdrKeyR = hkp
     s.nextHdrKeyR = nhkp
-    s.dhRatchetR = dhrp
-    zeroKey(s.dhRatchetPrivKey)
+    s.dhPublicKey = dhrp
+    zeroKey(s.dhParams.PrivateKey)
     s.ratchetFlag = true
     commitStagedSkippedKeys(s)
     s.msgNumR = np + 1

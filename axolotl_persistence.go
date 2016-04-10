@@ -5,6 +5,7 @@ import (
     "io"
     "encoding/binary"
     "container/list"
+	"github.com/arcpop/ecdh"
 )
 
 
@@ -75,18 +76,19 @@ func axolotlFromFile(fileName string) (*State, error)  {
     dhrsLen := binary.BigEndian.Uint32(buf[0:4])
     dhrrLen := binary.BigEndian.Uint32(buf[4:8])
     dhrpLen := binary.BigEndian.Uint32(buf[8:12])
-    s.dhRatchetS = make(dhkey, dhrsLen)
-    _, err = io.ReadFull(f, s.dhRatchetS)
+    s.dhParams = &ecdh.ECDH{Curve: dhCurves[s.CurveParam]()}
+    s.dhParams.PrivateKey = make(dhkey, dhrsLen)
+    _, err = io.ReadFull(f, s.dhParams.PrivateKey)
     if err != nil {
         return nil, err
     }
-    s.dhRatchetR = make(dhkey, dhrrLen)
-    _, err = io.ReadFull(f, s.dhRatchetR)
+    s.dhParams.PublicKey = make(dhkey, dhrrLen)
+    _, err = io.ReadFull(f, s.dhParams.PublicKey)
     if err != nil {
         return nil, err
     }
-    s.dhRatchetPrivKey = make(dhkey, dhrpLen)
-    _, err = io.ReadFull(f, s.dhRatchetPrivKey)
+    s.dhPublicKey = make(dhkey, dhrpLen)
+    _, err = io.ReadFull(f, s.dhPublicKey)
     if err != nil {
         return nil, err
     }
@@ -105,7 +107,6 @@ func axolotlFromFile(fileName string) (*State, error)  {
         }
         s.skippedKeys.PushBack(storedkey{sb[0:32], sb[32:64]})
     }
-    s.curve = dhCurves[s.CurveParam]()
     s.streamCipher = streamCiphers[s.StreamCipher]
     s.hkdf = hkdfs[s.HKDF]
     s.hmac = hmacs[s.HMAC]
@@ -221,27 +222,27 @@ func axolotlSaveTo(s *State, fileName string) error {
     if err != nil {
         return err
     }
-    err = saveUint32(f, uint32(len(s.dhRatchetS)))
+    err = saveUint32(f, uint32(len(s.dhParams.PrivateKey)))
     if err != nil {
         return err
     }
-    err = saveUint32(f, uint32(len(s.dhRatchetR)))
+    err = saveUint32(f, uint32(len(s.dhParams.PublicKey)))
     if err != nil {
         return err
     }
-    err = saveUint32(f, uint32(len(s.dhRatchetPrivKey)))
+    err = saveUint32(f, uint32(len(s.dhPublicKey)))
     if err != nil {
         return err
     }
-    err = saveBytes(f, s.dhRatchetS)
+    err = saveBytes(f, s.dhParams.PrivateKey)
     if err != nil {
         return err
     }
-    err = saveBytes(f, s.dhRatchetR)
+    err = saveBytes(f, s.dhParams.PublicKey)
     if err != nil {
         return err
     }
-    err = saveBytes(f, s.dhRatchetPrivKey)
+    err = saveBytes(f, s.dhPublicKey)
     if err != nil {
         return err
     }

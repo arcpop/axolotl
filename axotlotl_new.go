@@ -3,19 +3,21 @@ package axolotl
 import (
 	"io"
     "container/list"
+	"github.com/arcpop/ecdh"
 )
 
-func axolotlNew(curveParam, streamCipher, HKDF, HMAC uint8, senderSide bool, masterKey[]byte, initialDHRatchetKey []byte, privateDHRatchetKey []byte) (*State, error)  {
+func axolotlNewS(curveParam, streamCipher, HKDF, HMAC uint8, masterKey, dhPubKey []byte) (*State, error)  {
     state := &State{ 
         CurveParam: curveParam, 
         StreamCipher: streamCipher, 
         HKDF: HKDF, HMAC: HMAC, 
-        SenderSide: senderSide,
-        curve: dhCurves[curveParam](),
+        dhParams: &ecdh.ECDH{Curve: dhCurves[curveParam](), },
+        dhPublicKey: dhPubKey,
         streamCipher: streamCiphers[streamCipher],
         hkdf: hkdfs[HKDF],
         hmac: hmacs[HMAC],
-        ratchetFlag: senderSide,
+        SenderSide: true,
+        ratchetFlag: true,
         skippedKeys: list.New(),
     }
     kdf := state.hkdf(masterKey, []byte{}, []byte{})
@@ -26,14 +28,36 @@ func axolotlNew(curveParam, streamCipher, HKDF, HMAC uint8, senderSide bool, mas
         return nil, err
     }
     
-    if senderSide {
-        state.dhRatchetR = initialDHRatchetKey
-        err = createSenderKeys(kdf, state)
-    } else {
-        state.dhRatchetS = initialDHRatchetKey
-        state.dhRatchetPrivKey = privateDHRatchetKey
-        err = createReceiverKeys(kdf, state)
+    err = createSenderKeys(kdf, state)
+    if err != nil {
+        return nil, err
     }
+    return state, nil
+}
+
+func axolotlNewR(curveParam, streamCipher, HKDF, HMAC uint8, masterKey []byte, ecdhParams *ecdh.ECDH) (*State, error)  {
+    state := &State{ 
+        CurveParam: curveParam, 
+        StreamCipher: streamCipher, 
+        HKDF: HKDF, HMAC: HMAC, 
+        dhParams: ecdhParams,
+        dhPublicKey: nil,
+        streamCipher: streamCiphers[streamCipher],
+        hkdf: hkdfs[HKDF],
+        hmac: hmacs[HMAC],
+        SenderSide: false,
+        ratchetFlag: false,
+        skippedKeys: list.New(),
+    }
+    kdf := state.hkdf(masterKey, []byte{}, []byte{})
+    
+    state.rootKey = make([]byte, 32)
+    _, err := io.ReadFull(kdf, state.rootKey)
+    if err != nil {
+        return nil, err
+    }
+    
+    err = createReceiverKeys(kdf, state)
     if err != nil {
         return nil, err
     }
