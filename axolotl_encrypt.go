@@ -22,6 +22,9 @@ func dhRatchetGenerateKeys(s *State, randomData io.Reader) error {
 		return err
 	}
 
+    nonceSrc := make([]byte, 32)
+    _, err = io.ReadFull(randomData, nonceSrc)
+
 	dhSecret, err := ecdhParams.GetSharedSecret(s.dhPublicKey)
 	if err != nil {
 		return err
@@ -48,7 +51,10 @@ func dhRatchetGenerateKeys(s *State, randomData io.Reader) error {
 		return err
 	}
 
+    
+
 	s.rootKey = rk
+    s.headerNonceSource = nonceSrc
 	s.hdrKeyS = s.nextHdrKeyS
 	s.nextHdrKeyS = nhk
 	s.chainKeyS = ck
@@ -86,11 +92,13 @@ func axolotlEncryptMessage(s *State, msg []byte, randomData io.Reader) ([]byte, 
 	m := &message{}
 
 	m.headerNonceSize = byte(headerCipher.NonceSize())
+    
+    //Generate a nonce based on an initial random secret and the message number,
+    //This should not repeat the same nonce for the same header key
+    msgNumBuf := make([]byte, 4)
+    binary.BigEndian.PutUint32(msgNumBuf[:], s.msgNumS)
 	m.headerNonce = make([]byte, m.headerNonceSize)
-	_, err = io.ReadFull(randomData, m.headerNonce)
-	if err != nil {
-		return nil, err
-	}
+    copy(m.headerNonce, s.hmac(s.headerNonceSource).Sum(msgNumBuf))
 
 	m.messageNonceSize = byte(messageCipher.NonceSize())
 	m.messageNonce = make([]byte, m.messageNonceSize)

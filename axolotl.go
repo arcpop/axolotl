@@ -62,6 +62,8 @@ type State struct {
 
 	rootKey key
 
+    headerNonceSource []byte
+
 	hdrKeyS key
 	hdrKeyR key
 

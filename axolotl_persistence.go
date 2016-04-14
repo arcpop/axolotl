@@ -37,6 +37,11 @@ func axolotlFromFile(fileName string) (*State, error) {
 	if err != nil {
 		return nil, err
 	}
+    s.headerNonceSource = make([]byte, 32)
+    _, err = io.ReadFull(f, s.nextHdrKeyS)
+	if err != nil {
+		return nil, err
+	}
 	s.hdrKeyS = make(key, 32)
 	_, err = io.ReadFull(f, s.hdrKeyS)
 	if err != nil {
@@ -193,6 +198,10 @@ func axolotlSaveTo(s *State, fileName string) error {
 		return err
 	}
 	err = saveKey(f, s.rootKey)
+	if err != nil {
+		return err
+	}
+	err = saveKey(f, s.headerNonceSource)
 	if err != nil {
 		return err
 	}
